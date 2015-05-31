@@ -83,10 +83,11 @@ func (lo *LooseObject) SHA() SHA {
 // Read the header bytes out of an object, and cache them.
 func (lo *LooseObject) Header() (*ObjectHeader, error) {
 	lo.mu.Lock()
-	defer lo.mu.Unlock()
 	if lo.ObjectHeader != nil {
+		lo.mu.Unlock()
 		return lo.ObjectHeader, nil
 	}
+	lo.mu.Unlock()
 
 	r, err := lo.Reader()
 	if err != nil {
