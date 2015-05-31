@@ -13,9 +13,9 @@ import (
 
 // Entry point for obtaining an object
 func (r *Repository) Object(id SHA) (Object, error) {
-	lo := &LooseObject{sha: id}
+	lo := &LooseObject{repoRoot: r.Path, sha: id}
 
-	looseExists, err := r.exists(lo.Path())
+	looseExists, err := exists(lo.Path())
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func (r *Repository) Object(id SHA) (Object, error) {
 		return lo, nil
 	}
 
-	return nil, fmt.Errorf("object %q not found (packs not yet implemented)")
+	return nil, fmt.Errorf("object %q not found (packs not yet implemented)", id)
 }
 
 type ObjectType int
@@ -61,7 +61,8 @@ type ObjectHeader struct {
 }
 
 type LooseObject struct {
-	sha SHA
+	repoRoot string
+	sha      SHA
 
 	// Written on tree
 	*ObjectMode
@@ -73,7 +74,7 @@ type LooseObject struct {
 
 func (lo *LooseObject) Path() string {
 	str := lo.sha.String()
-	return filepath.Join(str[:2], str[2:])
+	return filepath.Join(lo.repoRoot, "objects", str[:2], str[2:])
 }
 
 func (lo *LooseObject) SHA() SHA {
@@ -201,8 +202,10 @@ type Closer func() error
 
 func (c Closer) Close() error { return c() }
 
+// Wraps `r` in an object which tees the bytes being read into a SHA1, and
+// verfies the object on Close(), and also limits the number of bytes being
+// read to the object size.
 func wrapHashVerifier(o Object, r io.ReadCloser) (io.ReadCloser, error) {
-
 	size, err := o.Size()
 	if err != nil {
 		return nil, err

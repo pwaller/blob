@@ -17,8 +17,12 @@ type Repository struct {
 }
 
 func Open(path string) (*Repository, error) {
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
 	dotGit := filepath.Join(path, ".git")
-	_, err := os.Stat(dotGit)
+	_, err = os.Stat(dotGit)
 	if err == nil {
 		path = dotGit
 	} else if !os.IsNotExist(err) {
@@ -27,8 +31,8 @@ func Open(path string) (*Repository, error) {
 	return &Repository{path}, nil
 }
 
-func (r *Repository) exists(path string) (bool, error) {
-	_, err := os.Stat(filepath.Join(r.Path, path))
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
 	if err == nil {
 		return true, nil
 	}
